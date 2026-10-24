@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12.1)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12.1...3.10)
 
 if(WIN32 AND NOT MINGW)
   if(NOT DEFINED CMAKE_DEBUG_POSTFIX)
@@ -17,6 +17,7 @@ SET(MY_DIR ${libfreenect2_examples_SOURCE_DIR})
 SET(DEPENDS_DIR "${MY_DIR}/../depends" CACHE STRING "Dependency directory")
 
 OPTION(ENABLE_OPENGL "Enable OpenGL support" ON)
+OPTION(ENABLE_DEPTHWS "Build Depthws (depth streaming over websocket, requires libwebsockets)" ON)
 
 # The example build system is standalone and will work out-of-tree with these files copied
 SET(freenect2_ROOT_DIR ${MY_DIR}/..)
@@ -91,3 +92,26 @@ IF(WIN32)
   ENDFOREACH(FILEI)
   INSTALL(FILES ${Protonect_DLLS} DESTINATION bin)
 ENDIF()
+
+IF(ENABLE_DEPTHWS)
+  IF(PKG_CONFIG_FOUND)
+    PKG_CHECK_MODULES(LibWebSockets libwebsockets)
+  ENDIF()
+
+  IF(LibWebSockets_FOUND)
+    ADD_EXECUTABLE(Depthws
+      Depthws.cpp
+    )
+    SET_TARGET_PROPERTIES(Depthws PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED ON)
+    TARGET_INCLUDE_DIRECTORIES(Depthws PRIVATE ${LibWebSockets_INCLUDE_DIRS})
+    TARGET_LINK_LIBRARIES(Depthws
+      ${freenect2_LIBRARIES}
+      ${LibWebSockets_LDFLAGS}
+    )
+    IF(WIN32)
+      INSTALL(TARGETS Depthws DESTINATION bin)
+    ENDIF()
+  ELSE()
+    MESSAGE(STATUS "libwebsockets not found: Depthws will not be built")
+  ENDIF()
+ENDIF(ENABLE_DEPTHWS)
